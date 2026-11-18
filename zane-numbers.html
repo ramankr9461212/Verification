@@ -162,8 +162,12 @@
 <script>
   const NUM_WORDS = ["Zero","One","Two","Three","Four","Five","Six","Seven","Eight","Nine"];
   const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-  // Some voices read a lone "A" as "uh", so spell out how each letter sounds.
-  const LETTER_SAY = { A: "ay", E: "ee", I: "eye", O: "oh", U: "you", Y: "why", Z: "zee" };
+  // Voices read a lone capital as "capital A", so spell out how each letter name sounds.
+  const LETTER_SAY = {
+    A: "ay", B: "bee", C: "see", D: "dee", E: "ee", F: "eff", G: "jee", H: "aitch", I: "eye",
+    J: "jay", K: "kay", L: "el", M: "em", N: "en", O: "oh", P: "pee", Q: "cue", R: "ar",
+    S: "ess", T: "tee", U: "you", V: "vee", W: "double you", X: "ex", Y: "why", Z: "zee"
+  };
   const MAX_DIGITS = 6;   // up to 999,999
   const MAX_LETTERS = 12;
 
@@ -270,7 +274,8 @@
       if (typed.length >= MAX_LETTERS) { speak("That's a long word!"); return; }
       typed += k;
       showTyped(keyColor(k));
-      speak(say);
+      if (synth) synth.cancel();
+      // Stay quiet while the word is being typed; say it once after the pause
       // After a short pause, read the whole word; the next tap starts a new one
       wordTimer = setTimeout(sayTyped, PAUSE_MS);
     }
@@ -288,7 +293,8 @@
   function sayTyped() {
     clearTimeout(wordTimer);
     if (!typed) return;
-    if (kind === "numbers" || typed.length > 1) speak(kind === "numbers" ? String(Number(typed)) : typed.toLowerCase());
+    if (kind === "numbers") speak(String(Number(typed)));
+    else speak(typed.length === 1 ? LETTER_SAY[typed] : typed.toLowerCase());
     finish();
   }
 
