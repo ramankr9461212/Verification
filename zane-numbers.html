@@ -175,6 +175,8 @@
   let build = false;      // false = one at a time, true = make a number / word
   let typed = "";
   let wordTimer = null;
+  let done = false;       // the number/word has been said; next tap starts a new one
+  const PAUSE_MS = 1400;
 
   try {
     const saved = JSON.parse(localStorage.getItem("zane-pad") || "{}");
@@ -238,7 +240,14 @@
     return kind === "numbers" ? colorFor(Number(k)) : colorFor(LETTERS.indexOf(k));
   }
 
+  function finish() {
+    done = true;
+    if (typed) word.textContent = kind === "numbers" ? "Tap to make a new number" : typed.toLowerCase();
+  }
+
   function press(k) {
+    if (build && done) { typed = ""; done = false; }
+    clearTimeout(wordTimer);
     if (kind === "numbers") {
       if (!build) {
         show(k, NUM_WORDS[k] + "!", keyColor(k));
@@ -249,6 +258,8 @@
       typed = (typed === "0" ? "" : typed) + k;
       showTyped();
       speak(String(Number(typed)));     // 1 then 3 says "thirteen"
+      // After a short pause the number is finished; the next tap starts fresh
+      wordTimer = setTimeout(finish, PAUSE_MS);
     } else {
       const say = LETTER_SAY[k] || k;
       if (!build) {
@@ -260,9 +271,8 @@
       typed += k;
       showTyped(keyColor(k));
       speak(say);
-      // After a short pause, read the whole word
-      clearTimeout(wordTimer);
-      if (typed.length > 1) wordTimer = setTimeout(sayTyped, 1400);
+      // After a short pause, read the whole word; the next tap starts a new one
+      wordTimer = setTimeout(sayTyped, PAUSE_MS);
     }
   }
 
@@ -278,7 +288,8 @@
   function sayTyped() {
     clearTimeout(wordTimer);
     if (!typed) return;
-    speak(kind === "numbers" ? String(Number(typed)) : typed.toLowerCase());
+    if (kind === "numbers" || typed.length > 1) speak(kind === "numbers" ? String(Number(typed)) : typed.toLowerCase());
+    finish();
   }
 
   // ----- mode switching -----
@@ -290,6 +301,7 @@
     $("t-build").textContent = kind === "numbers" ? "Make a number" : "Make a word";
     actions.hidden = !build;
     typed = "";
+    done = false;
     clearTimeout(wordTimer);
     if (synth) synth.cancel();
     renderPad();
@@ -311,10 +323,11 @@
   }));
   $("btn-back").addEventListener("click", () => {
     typed = typed.slice(0, -1);
+    done = false;
     clearTimeout(wordTimer);
     showTyped();
   });
-  $("btn-clear").addEventListener("click", () => { typed = ""; clearTimeout(wordTimer); showTyped(); });
+  $("btn-clear").addEventListener("click", () => { typed = ""; done = false; clearTimeout(wordTimer); showTyped(); });
   $("btn-say").addEventListener("click", sayTyped);
 
   // Physical keyboard: digits on the number pad, letters on the ABC pad
